@@ -1,0 +1,15 @@
+{
+    "name": "y4m2yuv",
+    "targetName": "y4m2yuv",
+    "targetType": "executable",
+    "sourcePath": ".",
+    "importPaths": [ "."],
+    "license": "public domain",
+    "description": "An example to convert y4m to yuv files",
+    "dependencies": 
+    {
+        "y4m-d": "~master"
+    }
+}
+
+

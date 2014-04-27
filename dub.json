@@ -1,6 +1,6 @@
 {
     "name": "y4m-d",
-    "description": "Y4M file loader/emitter.",
+    "description": "File loader for Y4M, a convenient uncompressed video format.",
     "homepage": "http://github.com/p0nce/y4m-d/",
     "license": "public domain",
 
