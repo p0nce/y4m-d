@@ -24,7 +24,7 @@ void main(string[] args)
         writefln("Input: %s %sx%s %sfps", inputFile, input.width, input.height, cast(double)(input.framerate.num) / (input.framerate.denom));
         int numFrames = 0;
         ubyte[] frameBytes;
-        while ( (frameBytes = input.nextFrame()) !is null)
+        while ( (frameBytes = input.readFrame()) !is null)
         {
             YUV ~= frameBytes;
             numFrames++;
