@@ -1,0 +1,15 @@
+{
+    "name": "y4m-d",
+    "description": "Y4M file loader/emitter.",
+    "homepage": "http://github.com/p0nce/y4m-d/",
+    "license": "public domain",
+
+    "targetType": "library",
+
+    "authors": [
+        "ponce"
+    ],
+
+    "sourcePaths": [ "." ],
+    "importPaths": [ "." ]
+}
