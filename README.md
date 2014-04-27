@@ -14,6 +14,20 @@ See UNLICENSE.txt
 
 ```d
 
-TODO
+import y4md;
+
+void main(string[] args)
+{
+   auto input = new Y4M("input-file.y4m");
+
+    writefln("Input: %s %sx%s %sfps", inputFile, input.width(), input.height(),
+             cast(double)(input.framerate().num) / (input.framerate().denom));
+
+    ubyte[] frameBytes;
+    while ( (frameBytes = input.nextFrame()) !is null)
+    {
+        // Do something with frame data in frameBytes[]
+    }
+}
 
 ```
