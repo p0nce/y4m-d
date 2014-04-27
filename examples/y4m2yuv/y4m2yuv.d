@@ -19,9 +19,9 @@ void main(string[] args)
 
     try
     {
-        auto input = new Y4M(inputFile);
+        auto input = new Y4MReader(inputFile);
 
-        writefln("Input: %s %sx%s %sfps", inputFile, input.width(), input.height(), cast(double)(input.framerate().num) / (input.framerate().denom));
+        writefln("Input: %s %sx%s %sfps", inputFile, input.width, input.height, cast(double)(input.framerate.num) / (input.framerate.denom));
         int numFrames = 0;
         ubyte[] frameBytes;
         while ( (frameBytes = input.nextFrame()) !is null)

@@ -22,27 +22,56 @@ class Y4MException : Exception
     }
 }
 
+enum Interlacing
+{
+    Progressive,
+    TopFieldFirst,
+    BottomFieldFirst,
+    MixedModes
+}
 
-class Y4M
+enum Subsampling
+{
+    C420,     /// 4:2:0 with coincident chroma planes
+    C422,     /// 4:2:2 with coincident chroma planes
+    C444,     /// 4:4:4 with coincident chroma planes
+    C420jpeg, /// 4:2:0 with biaxially-displaced chroma planes
+    C420paldv /// 4:2:0 with vertically-displaced chroma planes
+}
+
+struct Y4MDesc
+{
+    int width = 0;
+    int height = 0;
+    Rational framerate = Rational(0,0);
+    Rational pixelAR = Rational(1, 1); // default: square pixels
+    Interlacing interlacing = Interlacing.Progressive;
+    Subsampling subsampling = Subsampling.C420;
+
+    size_t frameSize()
+    {
+        final switch (subsampling)
+        {
+            case Subsampling.C420:
+            case Subsampling.C420jpeg:
+            case Subsampling.C420paldv:
+                return (width * height * 3) / 2;
+
+            case Subsampling.C422:
+                return width * height * 2;
+
+            case Subsampling.C444:
+                return width * height * 3;
+        }
+    }
+}
+
+class Y4MReader
 {
     public
     {
-        enum Interlacing
-        {
-            Progressive,
-            TopFieldFirst,
-            BottomFieldFirst,
-            MixedModes
-        }
-
-        enum Subsampling
-        {
-            C420,     /// 4:2:0 with coincident chroma planes
-            C422,     /// 4:2:2 with coincident chroma planes
-            C444,     /// 4:4:4 with coincident chroma planes
-            C420jpeg, /// 4:2:0 with biaxially-displaced chroma planes
-            C420paldv /// 4:2:0 with vertically-displaced chroma planes
-        }
+        Y4MDesc desc;
+        alias desc this;
 
         this(string inputFile)
         {
@@ -54,58 +83,10 @@ class Y4M
             _frameBuffer.length = frameSize();
         }
 
-        int width() pure const nothrow
-        {
-            return _width;
-        }
-
-        int height() pure const nothrow
-        {
-            return _height;
-        }
-
-        Interlacing interlacing() pure const nothrow
-        {
-            return _interlacing;
-        }
-
-        Subsampling subsampling() pure const nothrow
-        {
-            return _subsampling;
-        }
-
-        Rational pixelAR() pure const nothrow
-        {
-            return _pixelAR;
-        }
-
-        Rational framerate() pure const nothrow
-        {
-            return _framerate;
-        }      
-
-        size_t frameSize()
-        {
-            final switch (_subsampling)
-            {
-                case Subsampling.C420:
-                case Subsampling.C420jpeg:
-                case Subsampling.C420paldv:
-                    return (_width * _height * 3) / 2;
-
-                case Subsampling.C422:
-                    return _width * _height * 2;
-
-                case Subsampling.C444:
-                    return _width * _height * 3;
-            }
-        }
-
         // null if no more frames
         ubyte[] nextFrame()
         {
             if (_index == _file.size())
-            //if (_file. eof())
                 return null; // end of input
 
             // read 5 bytes
@@ -133,14 +114,7 @@ class Y4M
         size_t _index;
         ubyte _peeked;
         bool _hasPeek;
-
-        int _width = 0;
-        int _height = 0;
-        Rational _framerate = Rational(0,0);
-        Rational _pixelAR = Rational(1, 1); // default: square pixels
-        Interlacing _interlacing = Interlacing.Progressive;
-        Subsampling _subsampling = Subsampling.C420;
-
+        
 
         /// Returns: current byte in input and do not advance cursor.
         ubyte peek()
@@ -212,40 +186,40 @@ class Y4M
             {
                 if (param[0] == 'W')
                 {
-                    _width = to!int(param[1..$]);
+                    width = to!int(param[1..$]);
                 }
                 else if (param[0] == 'H')
                 {
-                    _height = to!int(param[1..$]);
+                    height = to!int(param[1..$]);
                 }
                 else if (param[0] == 'F')
                 {
-                    _framerate = parseRatio(param[1..$], Rational(0));
+                    framerate = parseRatio(param[1..$], Rational(0));
                 }
                 else if (param[0] == 'I')
                 {
                     if (param == "Ip")
-                        _interlacing = Interlacing.Progressive;
+                        interlacing = Interlacing.Progressive;
                     else if  (param == "It")
-                        _interlacing = Interlacing.TopFieldFirst;
+                        interlacing = Interlacing.TopFieldFirst;
                     else if  (param == "Im")
-                        _interlacing = Interlacing.MixedModes;
+                        interlacing = Interlacing.MixedModes;
                     else 
                         throw new Y4MException(format("Unsupported y4m attribute %s", param));
                 }
                 else if (param[0] == 'A')
                 {
-                    _pixelAR = parseRatio(param[1..$], Rational(1, 1));
+                    pixelAR = parseRatio(param[1..$], Rational(1, 1));
                 }
                 else if (param[0] == 'C')
                 {
                     switch(param)
                     {
-                        case "C420":      _subsampling = Subsampling.C420; break;
-                        case "C422":      _subsampling = Subsampling.C422; break;
-                        case "C444":      _subsampling = Subsampling.C444; break;
-                        case "C420jpeg":  _subsampling = Subsampling.C420jpeg; break;
-                        case "C420paldv": _subsampling = Subsampling.C420paldv; break;
+                        case "C420":      subsampling = Subsampling.C420; break;
+                        case "C422":      subsampling = Subsampling.C422; break;
+                        case "C444":      subsampling = Subsampling.C444; break;
+                        case "C420jpeg":  subsampling = Subsampling.C420jpeg; break;
+                        case "C420paldv": subsampling = Subsampling.C420paldv; break;
                         default: throw new Y4MException(format("Unsupported y4m attribute %s", param));
                     }
                 }
@@ -258,11 +232,11 @@ class Y4M
             }
 
             // check mandatory params
-            if (_width == 0)
+            if (width == 0)
                 throw new Y4MException(format("Missing width in y4m.", param));
-            if (_height == 0)
+            if (height == 0)
                 throw new Y4MException(format("Missing height in y4m.", param));
-            if (_framerate.num == 0 && _framerate.denom == 0)
+            if (framerate.num == 0 && framerate.denom == 0)
                 throw new Y4MException(format("Missing framerate in y4m.", param));
 
         }
