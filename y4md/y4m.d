@@ -30,6 +30,7 @@ enum Interlacing
     MixedModes
 }
 
+
 enum Subsampling
 {
     C420,     /// 4:2:0 with coincident chroma planes
@@ -44,7 +45,7 @@ struct Y4MDesc
     int width = 0;
     int height = 0;
     Rational framerate = Rational(0,0);
-    Rational pixelAR = Rational(1, 1); // default: square pixels
+    Rational pixelAR = Rational(0, 0); // default: unknown
     Interlacing interlacing = Interlacing.Progressive;
     Subsampling subsampling = Subsampling.C420;
 
@@ -66,6 +67,8 @@ struct Y4MDesc
     }
 }
 
+
+/// Instantiate this to read sequentially frame of a Y4M file.
 class Y4MReader
 {
     public
@@ -84,7 +87,7 @@ class Y4MReader
         }
 
         // null if no more frames
-        ubyte[] nextFrame()
+        ubyte[] readFrame()
         {
             if (_index == _file.size())
                 return null; // end of input
@@ -198,14 +201,18 @@ class Y4MReader
                 }
                 else if (param[0] == 'I')
                 {
-                    if (param == "Ip")
-                        interlacing = Interlacing.Progressive;
-                    else if  (param == "It")
-                        interlacing = Interlacing.TopFieldFirst;
-                    else if  (param == "Im")
-                        interlacing = Interlacing.MixedModes;
-                    else 
-                        throw new Y4MException(format("Unsupported y4m attribute %s", param));
+                    bool known = false;
+                    for(auto inter = Interlacing.min; inter <= Interlacing.max; ++inter)
+                    {
+                        if (param == interlacingString(inter))
+                        {
+                            interlacing = inter;
+                            known = true;
+                            break;
+                        }
+                    }
+                    if (!known)
+                        throw new Y4MException(format("Unsupported y4m interlacing attribute %s", param));
                 }
                 else if (param[0] == 'A')
                 {
@@ -213,15 +220,18 @@ class Y4MReader
                 }
                 else if (param[0] == 'C')
                 {
-                    switch(param)
+                    bool known = false;
+                    for(auto sub = Subsampling.min; sub <= Subsampling.max; ++sub)
                     {
-                        case "C420":      subsampling = Subsampling.C420; break;
-                        case "C422":      subsampling = Subsampling.C422; break;
-                        case "C444":      subsampling = Subsampling.C444; break;
-                        case "C420jpeg":  subsampling = Subsampling.C420jpeg; break;
-                        case "C420paldv": subsampling = Subsampling.C420paldv; break;
-                        default: throw new Y4MException(format("Unsupported y4m attribute %s", param));
+                        if (param == subsamplingString(sub))
+                        {
+                            subsampling = sub;
+                            known = true;
+                            break;
+                        }
                     }
+                    if (!known)
+                        throw new Y4MException(format("Unsupported y4m subsampling attribute %s", param));
                 }
                 else if (param[0] == 'X')
                 {
@@ -272,6 +282,80 @@ class Y4MReader
             else
                 throw new Y4MException("Wrong y4m, unexpected character.");
 
+        }
+    }
+}
+
+/// Instantiate this to write sequentially frames into a Y4M file.
+class Y4MWriter
+{
+    public
+    {
+        Y4MDesc desc;
+        alias desc this;
+
+        this(string outputFile, int width, int height, 
+             Rational framerate = Rational(0, 0),
+             Rational pixelAR = Rational(0, 0), // default: unknown
+             Interlacing interlacing = Interlacing.Progressive,
+             Subsampling subsampling = Subsampling.C420)
+        {
+            _file = File(outputFile, "wb");
+            this.width = width;
+            this.height = height;
+            this.framerate = framerate;
+            this.pixelAR = pixelAR;
+            this.interlacing = interlacing;
+            this.subsampling = subsampling;
+
+            string header = format("YUV4MPEG2 W%s H%s F%s:%s A%s:%s %s %s\n", 
+                                   width, height, framerate.num, framerate.denom, pixelAR.num, pixelAR.denom,
+                                   interlacingString(interlacing), subsamplingString(subsampling));
+            
+
+            _file.rawWrite!char(header[]);
+        }
+
+        void writeFrame(ubyte[] frameData)
+        {
+            if (frameData.length != frameSize)
+                assert(false); // unrecoverable error, contract not followed
+
+            static immutable string FRAME = "FRAME\n";
+
+            _file.rawWrite!char(FRAME[]);
+            _file.rawWrite!ubyte(frameData[]);
+        }
+    }
+
+    private
+    {
+        File _file;
+    }
+}
+
+private
+{
+    string interlacingString(Interlacing interlacing) pure nothrow
+    {
+        final switch(interlacing)
+        {
+            case Interlacing.Progressive:      return "Ip";
+            case Interlacing.TopFieldFirst:    return "It";
+            case Interlacing.BottomFieldFirst: return "Ib";
+            case Interlacing.MixedModes:       return "Im";
+        }
+    }
+
+    string subsamplingString(Subsampling subsampling) pure nothrow
+    {
+        final switch(subsampling)
+        {
+            case Subsampling.C420:      return "C420";
+            case Subsampling.C422:      return "C422";
+            case Subsampling.C444:      return "C444";
+            case Subsampling.C420jpeg:  return "C420jpeg";
+            case Subsampling.C420paldv: return "C420paldv";
         }
     }
 }

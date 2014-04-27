@@ -18,15 +18,26 @@ import y4md;
 
 void main(string[] args)
 {
-   auto input = new Y4MReader("input-file.y4m");
+    auto input = new Y4MReader("input-file.y4m");
 
     writefln("Input: %s %sx%s %sfps", inputFile, input.width, input.height,
              cast(double)(input.framerate.num) / (input.framerate.denom));
 
     ubyte[] frameBytes;
-    while ( (frameBytes = input.nextFrame()) !is null)
+    while ( (frameBytes = input.readFrame()) !is null)
     {
         // Do something with frame data in frameBytes[]
+    }
+
+
+    // Output a 1920x1080p25 stream
+    auto output = new Y4MWriter("output-file.y4m", 1920, 1080, Rational(25, 1)); 
+    frameBytes = new ubyte[output.frameSize()];
+    for (int i = 0; i < 100; ++i)
+    {
+        // write something in frameData...
+
+        output.writeFrame(frameBytes[]);
     }
 }
 
