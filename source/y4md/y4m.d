@@ -40,6 +40,22 @@ enum Subsampling
     C420paldv /// 4:2:0 with vertically-displaced chroma planes
 }
 
+/// Returns: true if subsampling is 4:2:0.
+bool is420Subsampling(Subsampling subsampling) pure nothrow
+{
+    final switch(subsampling) with (Subsampling)
+    {
+        case C420:
+        case C420jpeg:
+        case C420paldv:
+            return true;
+
+        case C422:
+        case C444:
+            return false;
+    }
+}
+
 struct Y4MDesc
 {
     int width = 0;
