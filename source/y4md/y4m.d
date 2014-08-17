@@ -48,21 +48,35 @@ struct Y4MDesc
     Rational pixelAR = Rational(0, 0); // default: unknown
     Interlacing interlacing = Interlacing.Progressive;
     Subsampling subsampling = Subsampling.C420;
+    int bitdepth = 8;
+
+    size_t sampleSize()
+    {
+        if (8 < bitdepth || bitdepth > 16)
+            throw new Y4MException(format("Bit-depth should be from 8 to 16 bits/sample, not %s.", bitdepth));
+
+        if (bitdepth == 8)
+            return 1;
+        else
+            return 2;
+    }
 
     size_t frameSize()
     {
+        size_t oneSample = sampleSize();
+
         final switch (subsampling)
         {
             case Subsampling.C420:
             case Subsampling.C420jpeg:
             case Subsampling.C420paldv:
-                return (width * height * 3) / 2;
+                return oneSample * (width * height * 3) / 2;
 
             case Subsampling.C422:
-                return width * height * 2;
+                return oneSample * width * height * 2;
 
             case Subsampling.C444:
-                return width * height * 3;
+                return oneSample * width * height * 3;
         }
     }
 }
@@ -129,7 +143,7 @@ class Y4MReader
                 _index += 1;
 
                 if (res.length != 1)
-                    throw new Y4MException("Wrong y4m, no enough bytes.");
+                    throw new Y4MException("Wrong y4m, not enough bytes.");
 
                 _peeked = buf[0];
 
@@ -223,15 +237,27 @@ class Y4MReader
                     bool known = false;
                     for(auto sub = Subsampling.min; sub <= Subsampling.max; ++sub)
                     {
-                        if (param == subsamplingString(sub))
+                        string ssub = subsamplingString(sub);
+                        if (param == ssub)
                         {
                             subsampling = sub;
                             known = true;
                             break;
                         }
+                        else if (param.length > ssub.length && param[0..ssub.length] == ssub && param[ssub.length] == 'p')
+                        {
+                            // high bit-depth support
+                            subsampling = sub;
+                            known = true;
+                            try
+                                bitdepth = to!int(param[ssub.length+1..$]);
+                            catch(ConvException e)
+                                throw new Y4MException(format("Expected an integer for bitdepth in colorspace attribute, got '%s' instead.", param));
+                            break;
+                        }
                     }
                     if (!known)
-                        throw new Y4MException(format("Unsupported y4m subsampling attribute %s", param));
+                        throw new Y4MException(format("Unsupported y4m colorspace attribute %s", param));
                 }
                 else if (param[0] == 'X')
                 {
@@ -298,7 +324,8 @@ class Y4MWriter
              Rational framerate = Rational(0, 0),
              Rational pixelAR = Rational(0, 0), // default: unknown
              Interlacing interlacing = Interlacing.Progressive,
-             Subsampling subsampling = Subsampling.C420)
+             Subsampling subsampling = Subsampling.C420,
+             int bitdepth = 8)
         {
             _file = File(outputFile, "wb");
             this.width = width;
@@ -307,10 +334,11 @@ class Y4MWriter
             this.pixelAR = pixelAR;
             this.interlacing = interlacing;
             this.subsampling = subsampling;
+            this.bitdepth = bitdepth;
 
-            string header = format("YUV4MPEG2 W%s H%s F%s:%s A%s:%s %s %s\n", 
+            string header = format("YUV4MPEG2 W%s H%s F%s:%s A%s:%s %s %s%s\n", 
                                    width, height, framerate.num, framerate.denom, pixelAR.num, pixelAR.denom,
-                                   interlacingString(interlacing), subsamplingString(subsampling));
+                                   interlacingString(interlacing), subsamplingString(subsampling), bitdepthString(bitdepth));
             
 
             _file.rawWrite!char(header[]);
@@ -357,5 +385,13 @@ private
             case Subsampling.C420jpeg:  return "C420jpeg";
             case Subsampling.C420paldv: return "C420paldv";
         }
+    }
+
+    string bitdepthString(int bitdepth) pure
+    {
+        if (bitdepth == 8)
+            return "";
+        else
+            return "p" ~ to!string(bitdepth);
     }
 }
