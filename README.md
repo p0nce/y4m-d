@@ -4,6 +4,12 @@ y4m-d is a tiny library to load/save Y4M video files.
 Y4M files are the simplest uncompressed video files that also contain meta-data 
 (width, height, chroma subsampling, etc...) which makes a better solution than .yuv files.
 
+High bit-depth are supported with any depth from 8 to 16. 
+However y4m-d does not handle endianness or shifted bits in samples. Frames are read/written as is.
+
+libavformat uses native endian for both reading and writing and align significant bits to the left.
+This means the Y4M format depends on the producer machine. So until probing is implemented it's up to take care of this.
+
 ## Licenses
 
 See UNLICENSE.txt
