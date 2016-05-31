@@ -7,7 +7,7 @@
     "targetType": "library",
 
     "authors": [
-        "ponce"
+        "Guillaume Piolat / p0nce"
     ],
 
     "sourcePaths": [ "source" ],

@@ -37,8 +37,8 @@ void main(string[] args)
     }
 
 
-    // Output a 1920x1080p25 8-bit stream
-    auto output = new Y4MWriter("output-file.y4m", 1920, 1080, Rational(25, 1), 8); 
+    // Output a 1920x1080p25 8-bit stream in stdout
+    auto output = new Y4MWriter(stdout, 1920, 1080, Rational(25, 1), 8); 
     frameBytes = new ubyte[output.frameSize()];
     for (int i = 0; i < 100; ++i)
     {
