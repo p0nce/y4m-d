@@ -37,7 +37,24 @@ enum Subsampling
     C422,     /// 4:2:2 with coincident chroma planes
     C444,     /// 4:4:4 with coincident chroma planes
     C420jpeg, /// 4:2:0 with biaxially-displaced chroma planes
-    C420paldv /// 4:2:0 with vertically-displaced chroma planes
+    C420paldv, /// 4:2:0 with vertically-displaced chroma planes
+    C420mpeg2
+}
+
+bool is420Subsampling(Subsampling sub) pure nothrow @nogc
+{
+    final switch (sub) with (Subsampling)
+    {
+        case C420: 
+        case C420jpeg:
+        case C420paldv:
+        case C420mpeg2:
+            return true;
+
+        case C422:
+        case C444:
+            return false;
+    }
 }
 
 struct Y4MDesc
@@ -70,6 +87,7 @@ struct Y4MDesc
             case Subsampling.C420:
             case Subsampling.C420jpeg:
             case Subsampling.C420paldv:
+            case Subsampling.C420mpeg2:
                 return oneSample * (width * height * 3) / 2;
 
             case Subsampling.C422:
@@ -108,8 +126,12 @@ class Y4MReader
         // null if no more frames
         ubyte[] readFrame()
         {
-            if (_index == _file.size())
-                return null; // end of input
+            if (_file.eof)
+                return null;
+
+            // Not all input are seekable
+            //if (_index == _file.size())
+            //    return null; // end of input
 
             // read 5 bytes
             string frame = "FRAME";
@@ -400,6 +422,7 @@ private
             case Subsampling.C444:      return "C444";
             case Subsampling.C420jpeg:  return "C420jpeg";
             case Subsampling.C420paldv: return "C420paldv";
+            case Subsampling.C420mpeg2: return "C420mpeg2";
         }
     }
 
